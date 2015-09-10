@@ -4,3 +4,4 @@ chopBAI
 rp-files/
 testdata/
 *.o
+*~
