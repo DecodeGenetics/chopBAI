@@ -239,17 +239,17 @@ void cropInterval(BamIndex<Csi> & outcsi, BamIndex<Csi> & incsi, GenomicInterval
     String<__uint32> candidateBins;
     _csiReg2bins(candidateBins, interval.begin, interval.end, incsi._minShift, incsi._depth);
     
-    typedef typename Iterator<String<__uint32>, Rooted>::Type TCandidateIter;
+    typedef Iterator<String<__uint32>, Rooted>::Type TCandidateIter;
     for (TCandidateIter it = begin(candidateBins, Rooted()); !atEnd(it); ++it)
     {
-        typedef typename std::map<__uint32, CsiBamIndexBinData_>::const_iterator TMapIter;
+        typedef std::map<__uint32, CsiBamIndexBinData_>::const_iterator TMapIter;
         TMapIter mIt = incsi._binIndices[interval.chrId].find(*it);
         if (mIt == incsi._binIndices[interval.chrId].end())
             continue;  // Candidate is not in index!
 
         // TODO: What about chunks.loffset?
         CsiBamIndexBinData_ chunks;
-        typedef typename Iterator<String<Pair<__uint64, __uint64> > const, Rooted>::Type TBegEndIter;
+        typedef Iterator<String<Pair<__uint64, __uint64> > const, Rooted>::Type TBegEndIter;
         for (TBegEndIter it2 = begin(mIt->second.chunkBegEnds, Rooted()); !atEnd(it2); goNext(it2))
             appendValue(chunks.chunkBegEnds, *it2);
         
@@ -362,16 +362,16 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
     String<__uint16> candidateBins;
     _baiReg2bins(candidateBins, interval.begin, interval.end);
     
-    typedef typename Iterator<String<__uint16>, Rooted>::Type TCandidateIter;
+    typedef Iterator<String<__uint16>, Rooted>::Type TCandidateIter;
     for (TCandidateIter it = begin(candidateBins, Rooted()); !atEnd(it); ++it)
     {
-        typedef typename std::map<__uint32, BaiBamIndexBinData_>::const_iterator TMapIter;
+        typedef std::map<__uint32, BaiBamIndexBinData_>::const_iterator TMapIter;
         TMapIter mIt = inbai._binIndices[interval.chrId].find(*it);
         if (mIt == inbai._binIndices[interval.chrId].end())
             continue;  // Candidate is not in index!
 
         BaiBamIndexBinData_ chunks;
-        typedef typename Iterator<String<Pair<__uint64, __uint64> > const, Rooted>::Type TBegEndIter;
+        typedef Iterator<String<Pair<__uint64, __uint64> > const, Rooted>::Type TBegEndIter;
         for (TBegEndIter it2 = begin(mIt->second.chunkBegEnds, Rooted()); !atEnd(it2); goNext(it2))
             if (it2->i2 >= linearMinOffset && it2->i1 < linearMaxOffset)
                 appendValue(chunks.chunkBegEnds, *it2);
