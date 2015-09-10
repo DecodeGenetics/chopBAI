@@ -4,7 +4,7 @@ CXX=/opt/rh/devtoolset-2/root/usr/bin/g++
 # include SeqAn libraries
 CXXFLAGS+=-I/nfs/odinn/users/birtek/code/libraries -DSEQAN_HAS_ZLIB=1 -lz -pthread
 
-DATE=on `date +'%Y-%m-%d %H:%M'`
+DATE=on $(shell git log --pretty=format:"%cd" --date=iso | cut -f 1,2 -d " " | head -n 1)
 CXXFLAGS+=-DDATE=\""$(DATE)"\"
 
 # Enable warnings
