@@ -164,6 +164,7 @@ bool parseInterval(GenomicInterval & interval, CharString & region, NameStoreCac
         {
             if (!lexicalCast(interval.begin, infix(region, infixBeg, position(it)))) return 1;
             if (!lexicalCast(interval.end, suffix(region, position(it) + 1))) return 1;
+            if (interval.begin != 0) --interval.begin;
             return 0;
         }
     }
@@ -273,7 +274,6 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
     unsigned windowEndIdx = (interval.end >> 14) + 1;
 
     __uint64 linearMinOffset = 0;
-    __uint64 linearMaxOffset = 0;
     
     if (windowIdx < length(inbai._linearIndices[interval.chrId]))
     {
@@ -327,35 +327,6 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
             linearMinOffset = back(inbai._linearIndices[interval.chrId]);
         }
     }
-
-    if (windowEndIdx < length(inbai._linearIndices[interval.chrId]))
-    {
-        linearMaxOffset = inbai._linearIndices[interval.chrId][windowEndIdx];
-    }
-    else // set linearMaxOffset to next non-zero entry in linear indices
-    {
-        for (unsigned i = interval.chrId + 1; i < length(inbai._linearIndices); ++i)
-        {
-            if (!empty(inbai._linearIndices[i]))
-            {
-                linearMaxOffset = front(inbai._linearIndices[i]);
-                if (linearMaxOffset != 0u)
-                    break;
-                for (unsigned j = 1; j < length(inbai._linearIndices[i]); ++j)
-                {
-                    if (inbai._linearIndices[i][j] != 0u)
-                    {
-                        linearMaxOffset = inbai._linearIndices[i][j];
-                        break;
-                    }
-                if (linearMaxOffset != 0u)
-                    break;
-                }
-            }
-        }
-    }
-    if (linearMaxOffset == 0)
-        linearMaxOffset = maxValue<__uint64>();
     
     // --- Crop the region from the bin index ---
     
@@ -373,7 +344,7 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
         BaiBamIndexBinData_ chunks;
         typedef Iterator<String<Pair<__uint64, __uint64> > const, Rooted>::Type TBegEndIter;
         for (TBegEndIter it2 = begin(mIt->second.chunkBegEnds, Rooted()); !atEnd(it2); goNext(it2))
-            if (it2->i2 >= linearMinOffset && it2->i1 < linearMaxOffset)
+            if (it2->i2 >= linearMinOffset)
                 appendValue(chunks.chunkBegEnds, *it2);
         
         if (length(chunks.chunkBegEnds) > 0)
