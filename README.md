@@ -53,7 +53,9 @@ References
 
 Birte Kehr and Páll Melsted (2015).
 chopBAI: BAM index reduction solves I/O bottlenecks in the joint analysis of large sequencing cohorts.
-Submitted.
+*bioRxiv*, 030825.
+
+http://biorxiv.org/content/early/2015/11/06/030825
 
 
 Contact
