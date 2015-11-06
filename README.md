@@ -30,21 +30,23 @@ Regions should be in the format `CHR:BEGIN-END`, e.g. `chr4:15000000-16000000`, 
 
 The program looks for a BAI file at `BAM-FILE.bai`.
 
-Running with chopped indices
-----------------------------
 
-Assuming we have the file `sequence.bam` and `sequence.bam.bai` in the current directory we can chop up the BAI file using
+Example use case
+----------------
+
+Assume we have given the file `sequence.bam` and `sequence.bam.bai` in the current directory.
+We can create a reduced BAI file using
 
     ./chopBAI sequence.bam chr4:15000000-16000000
 
-this will create the folder `chr4:15000000-16000000` with the smaller file `sequence.bam.bai` inside it. Many tools assume that the BAM and the BAI file share a common prefix. In that case you can get around this with a symbolic link, e.g
+This will create the folder `chr4:15000000-16000000` with the reduced BAI file `sequence.bam.bai` inside it.
 
-    cd chr4:15000000-16000000
-    ln -s ../sequence.bam
-    samtools view -c chr4:15500000-15600000 sequence.bam
-    cd ../
+If you would like to use a tool that assumes the BAM and the BAI file to share a common prefix (such as `samtools`),  you can create a symbolic link, e.g
 
-which uses the original bam file, but the reduced index.
+    ln -s sequence.bam chr4:15000000-16000000/sequence.bam
+    samtools view -c chr4:15000000-16000000/sequence.bam chr4:15500000-15600000
+
+which then uses the original bam file, but the reduced index.
 
 References
 ----------
