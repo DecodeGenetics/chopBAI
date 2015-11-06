@@ -10,10 +10,10 @@ Installation
 1. Download the SeqAn library version 2.0.0 or later from https://github.com/seqan/seqan.
    You do *not* need to follow the SeqAn install instructions.
    You only need the directory .../include/seqan of the SeqAn core library with all its content.
-2. Set the path to the SeqAn core library in the 'Makefile' if it does not reside into the chopBAI source directory,
-   e.g. to 'SEQAN_LIB=/home/<user>/libraries/' if it you have the seqan directory containing all header files stored in
-   '/home/<user>/libraries/seqan/'.
-3. Run 'make' in the chopBAI directory. If everything is setup correctly, this will create the binary 'chopBAI'.
+2. Set the path to the SeqAn core library in the `Makefile` if you chose not to save it in the chopBAI source directory.
+   E.g. set it to to `SEQAN_LIB=/home/<user>/libraries/` if the seqan directory containing all header files is stored in
+   `/home/<user>/libraries/seqan/`.
+3. Run `make` in the chopBAI directory. If everything is setup correctly, this will create the binary `chopBAI`.
 
 
 Usage
@@ -26,9 +26,9 @@ You can either specify one or more regions on the command line or pass a file li
     ./chopBAI [OPTIONS] BAM-FILE REGION-FILE
 
 
-Regions should be in the format 'CHR:BEGIN-END', e.g. 'chr4:15000000-16000000'.
+Regions should be in the format `CHR:BEGIN-END`, e.g. `chr4:15000000-16000000`.
 
-The program looks for a BAI file at 'BAM-FILE.bai'.
+The program looks for a BAI file at `BAM-FILE.bai`.
 
 
 References
