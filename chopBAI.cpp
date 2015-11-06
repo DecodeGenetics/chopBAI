@@ -1,8 +1,8 @@
 #include <fstream>
 #include <sstream>
 
-#include <seqan-2.0.0/arg_parse.h>
-#include <seqan-2.0.0/bam_io.h>
+#include <seqan/arg_parse.h>
+#include <seqan/bam_io.h>
 
 #include "bam_index_csi.h"
 
