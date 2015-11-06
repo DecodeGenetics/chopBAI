@@ -19,17 +19,32 @@ Installation
 Usage
 -----
 
-chopBAI expects a BAM file and a list of regions (genomic intervals) as paramters.
+chopBAI expects a BAM file and a list of regions (genomic intervals) as parameters.
 You can either specify one or more regions on the command line or pass a file listing one region per file:
 
     ./chopBAI [OPTIONS] BAM-FILE REGION1 [... REGIONn]
     ./chopBAI [OPTIONS] BAM-FILE REGION-FILE
 
 
-Regions should be in the format `CHR:BEGIN-END`, e.g. `chr4:15000000-16000000`.
+Regions should be in the format `CHR:BEGIN-END`, e.g. `chr4:15000000-16000000`, one region per line.
 
 The program looks for a BAI file at `BAM-FILE.bai`.
 
+Running with chopped indices
+----------------------------
+
+Assuming we have the file `sequence.bam` and `sequence.bam.bai` in the current directory we can chop up the BAI file using
+
+    ./chopBAI sequence.bam chr4:15000000-16000000
+
+this will create the folder `chr4:15000000-16000000` with the smaller file `sequence.bam.bai` inside it. Many tools assume that the BAM and the BAI file share a common prefix. In that case you can get around this with a symbolic link, e.g
+
+    cd chr4:15000000-16000000
+    ln -s ../sequence.bam
+    samtools view -c chr4:15500000-15600000 sequence.bam
+    cd ../
+
+which uses the original bam file, but the reduced index.
 
 References
 ----------
