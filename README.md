@@ -20,7 +20,7 @@ Usage
 -----
 
 chopBAI expects a BAM file and a list of regions (genomic intervals) as paramters.
-You can either specify one or more regions on the command line or pass a file listing one region per file:
+You can either specify one or more regions on the command line or pass a file listing one region per line:
 
     ./chopBAI [OPTIONS] BAM-FILE REGION1 [... REGIONn]
     ./chopBAI [OPTIONS] BAM-FILE REGION-FILE
