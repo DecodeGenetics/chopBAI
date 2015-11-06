@@ -20,13 +20,13 @@ Usage
 -----
 
 chopBAI expects a BAM file and a list of regions (genomic intervals) as parameters.
-You can either specify one or more regions on the command line or pass a file listing one region per file:
+You can either specify one or more regions on the command line or pass a file listing one region per line:
 
     ./chopBAI [OPTIONS] BAM-FILE REGION1 [... REGIONn]
     ./chopBAI [OPTIONS] BAM-FILE REGION-FILE
 
 
-Regions should be in the format `CHR:BEGIN-END`, e.g. `chr4:15000000-16000000`, one region per line.
+Regions should be in the format `CHR:BEGIN-END`, e.g. `chr4:15000000-16000000`.
 
 The program looks for a BAI file at `BAM-FILE.bai`.
 
