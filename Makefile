@@ -4,8 +4,7 @@ CC=$(CXX)
 
 # Set this to include SeqAn libraries, either system wide
 # or download into current folder and set to .
-SEQAN_LIB=/nfs/odinn/users/birtek/code/libraries
-#SEQAN_LIB=.
+SEQAN_LIB=.
 
 CXXFLAGS+=-I$(SEQAN_LIB) -DSEQAN_HAS_ZLIB=1
 LDLIBS=-lz -lpthread
