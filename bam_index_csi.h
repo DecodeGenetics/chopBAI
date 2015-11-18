@@ -170,11 +170,10 @@ jumpToRegion(FormattedFile<Bam, Input, TSpec> & bamFile,
 // ----------------------------------------------------------------------------
 
 template <typename TSpec, typename TNameStore, typename TNameStoreCache>
-bool jumpToOrphans(FormattedFile<Bam, Input, TSpec> & bamFile,
-                   bool & hasAlignments,
-                   BamIndex<Csi> const & index)
+bool jumpToOrphans(FormattedFile<Bam, Input, TSpec> & /*bamFile*/,
+                   bool & /*hasAlignments*/,
+                   BamIndex<Csi> const & /*index*/)
 {
-
     SEQAN_FAIL("This does not work yet!");
     return false;
 }
