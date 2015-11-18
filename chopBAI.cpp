@@ -131,6 +131,63 @@ bool readRegions(String<CharString> & regions, CharString const & regionsFile)
     return 0;
 }
 
+// -----------------------------------------------------------------------------
+// Function fileExists()
+// -----------------------------------------------------------------------------
+
+bool fileExists(CharString & filename)
+{
+    FILE *file = fopen(toCString(filename), "r");
+    if (file != NULL)
+    {
+        fclose(file);
+        return true;
+    }
+    return false;
+}
+
+
+// -----------------------------------------------------------------------------
+// Function findIndexFile()
+// -----------------------------------------------------------------------------
+
+bool findIndexFile(CharString & indexfile, CharString & bamfile)
+{
+    // Check if BAI file exists: Given FILE.bam, first look for FILE.bam.bai and then for FILE.bai
+    indexfile = bamfile;
+    indexfile += ".bai";
+    
+    if (fileExists(indexfile))
+        return 0;
+    
+    if (suffix(bamfile, length(bamfile)-4) == ".bam")
+    {
+        indexfile = prefix(bamfile, length(bamfile)-4);
+        indexfile += ".bai";
+
+        if (fileExists(indexfile))
+            return 0;
+    }
+
+    // Check if CSI file exists: Given FILE.bam, first look for FILE.bam.csi and then for FILE.csi
+    indexfile = bamfile;
+    indexfile += ".csi";
+    
+    if (fileExists(indexfile))
+        return 0;
+    
+    if (suffix(bamfile, length(bamfile)-4) == ".bam")
+    {
+        indexfile = prefix(bamfile, length(bamfile)-4);
+        indexfile += ".csi";
+
+        if (fileExists(indexfile))
+            return 0;
+    }
+    
+    std::cerr << "ERROR: Could not find .bai or .csi file for input bam file " << bamfile << std::endl;
+    return 1;
+}
 
 // -----------------------------------------------------------------------------
 // Function parseInterval()
@@ -552,28 +609,22 @@ int main(int argc, char const ** argv)
     String<GenomicInterval> intervals;
     if (parseIntervals(intervals, options.regions, options.bamfile) != 0)
         return 1;
-        
-    CharString baifile = options.bamfile;
-    baifile += ".bai";
-    CharString csifile = options.bamfile;
-    csifile += ".csi";
 
-    if (FILE *file = fopen(toCString(baifile), "r")) // check if bai file exists
-    {
-        fclose(file);
-        if (chopIndex(intervals, baifile, options, Bai()) != 0)
-            return 1;
-    }
-    else if (FILE *file = fopen(toCString(csifile), "r")) // check if csi file exists
-    {
-        fclose(file);
-        if (chopIndex(intervals, csifile, options, Csi()) != 0)
-            return 1;
-    }
-    else
-    {
-        std::cerr << "ERROR: Could not find .bai or .csi file for input bam file " << options.bamfile << std::endl;
+    // Look for the index file given a BAM file.
+    CharString indexfile;
+    if (findIndexFile(indexfile, options.bamfile) != 0)
         return 1;
+    
+    // Chop the index file.
+    if (suffix(indexfile, length(indexfile) - 3) == "bai") // Found BAI file
+    {
+        if (chopIndex(intervals, indexfile, options, Bai()) != 0)
+            return 1;
+    }
+    else if (suffix(indexfile, length(indexfile) - 3) == "csi") // Found CSI file
+    {
+        if (chopIndex(intervals, indexfile, options, Csi()) != 0)
+            return 1;
     }
     
     return 0;
