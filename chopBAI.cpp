@@ -93,7 +93,7 @@ void getOptionValues(ChopBaiOptions & options, ArgumentParser & parser)
 // Function parseCommandLine()
 // -----------------------------------------------------------------------------
 
-int parseCommandLine(ChopBaiOptions & options, int argc, char const ** argv)
+ArgumentParser::ParseResult parseCommandLine(ChopBaiOptions & options, int argc, char const ** argv)
 {
     // Setup the parser.
     ArgumentParser parser(argv[0]);
@@ -102,12 +102,12 @@ int parseCommandLine(ChopBaiOptions & options, int argc, char const ** argv)
     // Parse the command line.
     ArgumentParser::ParseResult res = parse(parser, argc, argv);
     if (res != ArgumentParser::PARSE_OK)
-        return 1;
+        return res;
 
     // Collect the option values.
     getOptionValues(options, parser);
 
-    return 0;
+    return res;
 }
 
 
@@ -602,7 +602,10 @@ int main(int argc, char const ** argv)
 {
     // Parse command line parameters.
     ChopBaiOptions options;
-    if (parseCommandLine(options, argc, argv) != 0)
+    ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
+    if (res == ArgumentParser::PARSE_HELP || res == ArgumentParser::PARSE_VERSION)
+        return 0;
+    else if (res != ArgumentParser::PARSE_OK)
         return 1;
 
     // Parse the regions.
