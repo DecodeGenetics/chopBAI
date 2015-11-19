@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <unistd.h>
 
 #include <seqan/arg_parse.h>
 #include <seqan/bam_io.h>
@@ -19,9 +20,10 @@ struct ChopBaiOptions {
     // Output options
     CharString outputPrefix;
     bool writeLinear;
+    bool createSymlink;
 
     ChopBaiOptions() :
-        outputPrefix("."), writeLinear(false)
+        outputPrefix("."), writeLinear(false), createSymlink(false)
     {}
 };
 
@@ -65,10 +67,12 @@ void setupParser(ArgumentParser & parser, ChopBaiOptions & options)
     addSection(parser, "Output options");
     addOption(parser, ArgParseOption("p", "prefix", "Output prefix.", ArgParseArgument::STRING, "STR"));
     addOption(parser, ArgParseOption("l", "linear", "Include linear index of BAI in the output."));
+    addOption(parser, ArgParseOption("s", "symlink", "Create a symbolic link to the bam file in the output directory."));
 
     // Set defualt values.
     setDefaultValue(parser, "prefix", "current directory");
     setDefaultValue(parser, "linear", options.writeLinear?"true":"false");
+    setDefaultValue(parser, "symlink", options.createSymlink?"true":"false");
 }
 
 
@@ -87,6 +91,8 @@ void getOptionValues(ChopBaiOptions & options, ArgumentParser & parser)
         getOptionValue(options.outputPrefix, parser, "prefix");
     if (isSet(parser, "linear"))
         options.writeLinear = true;
+    if (isSet(parser, "symlink"))
+        options.createSymlink = true;
 }
 
 
@@ -661,6 +667,15 @@ int chopIndex(String<GenomicInterval> & intervals, CharString & indexfile, ChopB
         // Write the output bam index for the region.
         if (!saveIndex(outIndex, toCString(outfile.str())))
             return 1;
+
+        // Create a symbolic link to the bam file if wished.
+        if (options.createSymlink)
+        {
+            CharString linkedbam = prefix(outfile.str(), length(outfile.str()) - 4);
+            if (suffix(linkedbam, length(linkedbam) - 4) != ".bam")
+                linkedbam += ".bam";
+            symlink(toCString(options.bamfile), toCString(linkedbam));
+        }
     }
 
     return 0;
