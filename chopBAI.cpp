@@ -692,7 +692,8 @@ int main(int argc, char const ** argv)
     // Parse command line parameters.
     ChopBaiOptions options;
     ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
-    if (res == ArgumentParser::PARSE_HELP || res == ArgumentParser::PARSE_VERSION)
+    if (res == ArgumentParser::PARSE_HELP || res == ArgumentParser::PARSE_VERSION ||
+        res ==  ArgumentParser::PARSE_WRITE_CTD || res == ArgumentParser::PARSE_EXPORT_HELP)
         return 0;
     else if (res != ArgumentParser::PARSE_OK)
         return 1;
