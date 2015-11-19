@@ -94,7 +94,7 @@ void getOptionValues(ChopBaiOptions & options, ArgumentParser & parser)
 // Function parseCommandLine()
 // -----------------------------------------------------------------------------
 
-int parseCommandLine(ChopBaiOptions & options, int argc, char const ** argv)
+ArgumentParser::ParseResult parseCommandLine(ChopBaiOptions & options, int argc, char const ** argv)
 {
     // Setup the parser.
     ArgumentParser parser(argv[0]);
@@ -103,12 +103,12 @@ int parseCommandLine(ChopBaiOptions & options, int argc, char const ** argv)
     // Parse the command line.
     ArgumentParser::ParseResult res = parse(parser, argc, argv);
     if (res != ArgumentParser::PARSE_OK)
-        return 1;
+        return res;
 
     // Collect the option values.
     getOptionValues(options, parser);
 
-    return 0;
+    return res;
 }
 
 template<typename T>
@@ -148,7 +148,7 @@ bool parseDecimals(T &x, const CharString &s) {
     }
     i++;
   }
-  
+
   x = val;
   return true;
 }
@@ -174,6 +174,63 @@ bool readRegions(String<CharString> & regions, CharString const & regionsFile)
     return 0;
 }
 
+// -----------------------------------------------------------------------------
+// Function fileExists()
+// -----------------------------------------------------------------------------
+
+bool fileExists(CharString & filename)
+{
+    FILE *file = fopen(toCString(filename), "r");
+    if (file != NULL)
+    {
+        fclose(file);
+        return true;
+    }
+    return false;
+}
+
+
+// -----------------------------------------------------------------------------
+// Function findIndexFile()
+// -----------------------------------------------------------------------------
+
+bool findIndexFile(CharString & indexfile, CharString & bamfile)
+{
+    // Check if BAI file exists: Given FILE.bam, first look for FILE.bam.bai and then for FILE.bai
+    indexfile = bamfile;
+    indexfile += ".bai";
+
+    if (fileExists(indexfile))
+        return 0;
+
+    if (suffix(bamfile, length(bamfile)-4) == ".bam")
+    {
+        indexfile = prefix(bamfile, length(bamfile)-4);
+        indexfile += ".bai";
+
+        if (fileExists(indexfile))
+            return 0;
+    }
+
+    // Check if CSI file exists: Given FILE.bam, first look for FILE.bam.csi and then for FILE.csi
+    indexfile = bamfile;
+    indexfile += ".csi";
+
+    if (fileExists(indexfile))
+        return 0;
+
+    if (suffix(bamfile, length(bamfile)-4) == ".bam")
+    {
+        indexfile = prefix(bamfile, length(bamfile)-4);
+        indexfile += ".csi";
+
+        if (fileExists(indexfile))
+            return 0;
+    }
+
+    std::cerr << "ERROR: Could not find .bai or .csi file for input bam file " << bamfile << std::endl;
+    return 1;
+}
 
 // -----------------------------------------------------------------------------
 // Function parseInterval()
@@ -619,7 +676,10 @@ int main(int argc, char const ** argv)
 {
     // Parse command line parameters.
     ChopBaiOptions options;
-    if (parseCommandLine(options, argc, argv) != 0)
+    ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
+    if (res == ArgumentParser::PARSE_HELP || res == ArgumentParser::PARSE_VERSION)
+        return 0;
+    else if (res != ArgumentParser::PARSE_OK)
         return 1;
 
     // Parse the regions.
@@ -627,28 +687,22 @@ int main(int argc, char const ** argv)
     if (parseIntervals(intervals, options.regions, options.bamfile) != 0)
         return 1;
 
-    CharString baifile = options.bamfile;
-    baifile += ".bai";
-    CharString csifile = options.bamfile;
-    csifile += ".csi";
-
-    if (FILE *file = fopen(toCString(baifile), "r")) // check if bai file exists
-    {
-        fclose(file);
-        if (chopIndex(intervals, baifile, options, Bai()) != 0)
-            return 1;
-    }
-    else if (FILE *file = fopen(toCString(csifile), "r")) // check if csi file exists
-    {
-        fclose(file);
-        if (chopIndex(intervals, csifile, options, Csi()) != 0)
-            return 1;
-    }
-    else
-    {
-        std::cerr << "ERROR: Could not find .bai or .csi file for input bam file " << options.bamfile << std::endl;
+    // Look for the index file given a BAM file.
+    CharString indexfile;
+    if (findIndexFile(indexfile, options.bamfile) != 0)
         return 1;
-    }
 
+    // Chop the index file.
+    if (suffix(indexfile, length(indexfile) - 3) == "bai") // Found BAI file
+    {
+        if (chopIndex(intervals, indexfile, options, Bai()) != 0)
+            return 1;
+    }
+    else if (suffix(indexfile, length(indexfile) - 3) == "csi") // Found CSI file
+    {
+        if (chopIndex(intervals, indexfile, options, Csi()) != 0)
+            return 1;
+    }
+    
     return 0;
 }
