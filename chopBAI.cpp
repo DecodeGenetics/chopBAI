@@ -53,7 +53,7 @@ void setupParser(ArgumentParser & parser, ChopBaiOptions & options)
 
     addDescription(parser, "Writes small index files for the specified regions based on an existing bai or csi file for "
                            "the input bamfile. The regions have to be specified in the formats \'chr:begin-end\', \'chr:begin\' and \'chr\' "
-                           " where \'begin\' and \'end\' are 1-based and both endpoints are included."
+                           " where \'begin\' and \'end\' are 1-based and both endpoints are included. "
                            "The regions can be listed directly on the command line separated by spaces or in a file listing one region "
                            "per line. The program writes a smaller index file for each region to the directory "
                            "\'<output prefix>/<region>/<bamfile>.[bai|csi]\'. The output directories are created if "
