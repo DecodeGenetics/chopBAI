@@ -19,7 +19,7 @@ struct ChopBaiOptions {
     // Output options
     CharString outputPrefix;
     bool writeLinear;
-    
+
     ChopBaiOptions() :
         outputPrefix("."), writeLinear(false)
     {}
@@ -42,20 +42,21 @@ struct GenomicInterval {
 void setupParser(ArgumentParser & parser, ChopBaiOptions & options)
 {
     setShortDescription(parser, "chops a bam index file into pieces");
-    
+
     setVersion(parser, "0.1 beta");
     setDate(parser, DATE);
-    
+
     addUsageLine(parser, "[\\fIOPTIONS\\fP] \\fIBAM-FILE\\fP \\fIREGION1\\fP [... \\fIREGIONn\\fP]");
     addUsageLine(parser, "[\\fIOPTIONS\\fP] \\fIBAM-FILE\\fP \\fIREGION-FILE\\fP");
-    
+
     addDescription(parser, "Writes small index files for the specified regions based on an existing bai or csi file for "
-                           "the input bamfile. The regions have to be specified in the format \'chr:begin-end\' and can "
-                           "be listed directly on the command line separated by spaces or in a file listing one region "
+                           "the input bamfile. The regions have to be specified in the formats \'chr:begin-end\', \'chr:begin\' and \'chr\' "
+                           " where \'begin\' and \'end\' are 1-based and both endpoints are included."
+                           "The regions can be listed directly on the command line separated by spaces or in a file listing one region "
                            "per line. The program writes a smaller index file for each region to the directory "
                            "\'<output prefix>/<region>/<bamfile>.[bai|csi]\'. The output directories are created if "
                            "they do not exist.");
-    
+
     // Required arguments.
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUT_FILE, "BAM-FILE"));
     addArgument(parser, ArgParseArgument(ArgParseArgument::INPUT_FILE, "REGIONS", true));
@@ -80,7 +81,7 @@ void getOptionValues(ChopBaiOptions & options, ArgumentParser & parser)
     // Get argument values.
     getArgumentValue(options.bamfile, parser, 0);
     options.regions = getArgumentValues(parser, 1);
-    
+
     // Get option values.
     if (isSet(parser, "prefix"))
         getOptionValue(options.outputPrefix, parser, "prefix");
@@ -110,6 +111,48 @@ int parseCommandLine(ChopBaiOptions & options, int argc, char const ** argv)
     return 0;
 }
 
+template<typename T>
+bool parseDecimals(T &x, const CharString &s) {
+  // if it's easy, just cast
+  if (lexicalCast(x, s)) {
+      return true;
+  }
+
+  T val(0);
+  int n = length(s);
+  int lastcomma = -1;
+  int i = 0;
+  char c;
+  while (i <= n) {
+    if (i==n) {
+      c=',';
+    } else {
+      c=s[i];
+    }
+    if (!isdigit(c)) {
+      if (c == ',') {
+        if ((i - lastcomma) == 4 || (lastcomma == -1 && i < 4)) {
+          T t(0);
+          if (!lexicalCast(t,infix(s,lastcomma+1,i))) {
+            return false;
+          }
+          val *= 1000;
+          val += t;
+          lastcomma = i;
+        } else {
+          return false; // too many digits between commas
+        }
+      } else {
+        return false; // not a digit or comma
+      }
+    }
+    i++;
+  }
+  
+  x = val;
+  return true;
+}
+
 
 // -----------------------------------------------------------------------------
 // Function readRegions()
@@ -123,7 +166,7 @@ bool readRegions(String<CharString> & regions, CharString const & regionsFile)
         std::cerr << "ERROR: Could not open file listing the regions: " << regionsFile << std::endl;
         return 1;
     }
-    
+
     std::string region;
     while (getline(stream, region))
         appendValue(regions, region);
@@ -139,36 +182,67 @@ bool readRegions(String<CharString> & regions, CharString const & regionsFile)
 bool parseInterval(GenomicInterval & interval, CharString & region, NameStoreCache<StringSet<CharString> > & refNames)
 {
     typedef Iterator<CharString, Rooted>::Type TIter;
-    
+
     // Read the chromosome name.
     CharString chrName;
     TIter it = begin(region);
     TIter itEnd = end(region);
-    for (; it != itEnd; ++it)
+    goEnd(it);
+    bool hasColon = false;
+    while(!atBegin(it))
     {
+        goPrevious(it);
         if (*it == ':')
         {
+            hasColon = true;
             chrName = prefix(region, position(it));
             break;
         }
     }
-    if (it == itEnd) return 1;
-    interval.chrId = nameToId(refNames, chrName);
-    
+
+    if (hasColon)
+    {
+        if (!getIdByName(interval.chrId, refNames, chrName))
+        {
+            std::cerr << "WARNING: " << chrName << " does not specify a valid region " << std::endl;
+            return 1;
+        }
+    } else {
+        if (!getIdByName(interval.chrId, refNames, region))
+        {
+            std::cerr << "WARNING: " << chrName << " does not specify a valid region " << std::endl;
+            return 1;
+        }
+        interval.begin = 0;
+        interval.end = MaxValue<__uint32>::VALUE;
+        return 0;
+    }
+
     // Read the begin and end position.
     ++it;
     size_t infixBeg = position(it);
+    bool hasDash = false;
     for (; it != itEnd; ++it)
     {
         if (*it == '-')
         {
-            if (!lexicalCast(interval.begin, infix(region, infixBeg, position(it)))) return 1;
-            if (!lexicalCast(interval.end, suffix(region, position(it) + 1))) return 1;
+            hasDash = true;
+            if (!parseDecimals(interval.begin, CharString(infix(region, infixBeg, position(it))))) return 1;
+            if (!parseDecimals(interval.end, CharString(suffix(region, position(it) + 1)))) return 1;
             if (interval.begin != 0) --interval.begin;
             return 0;
         }
     }
-    
+
+    if (!hasDash)
+    {
+        if (!parseDecimals(interval.begin, CharString(infix(region,infixBeg, position(itEnd))))) return 1;
+        if (interval.begin != 0) --interval.begin;
+        interval.end = MaxValue<__uint32>::VALUE;
+        return 0;
+    }
+
+
     return 1;
 }
 
@@ -180,7 +254,7 @@ bool parseInterval(GenomicInterval & interval, CharString & region, NameStoreCac
 bool parseIntervals(String<GenomicInterval> & intervals, String<CharString> & regions, CharString & bamfile)
 {
     typedef NameStoreCache<StringSet<CharString> > TNamesCache;
-    
+
     // Convert chromosome name into chrId using the header of bamfile.
     BamFileIn bamFileIn;
     if (!open(bamFileIn, toCString(bamfile)))
@@ -191,7 +265,7 @@ bool parseIntervals(String<GenomicInterval> & intervals, String<CharString> & re
     BamHeader header;
     readHeader(header, bamFileIn);
     TNamesCache refNames = contigNamesCache(context(bamFileIn));
-    
+
     if (length(regions) == 1)
     {
         // Check if it is a single region.
@@ -201,13 +275,13 @@ bool parseIntervals(String<GenomicInterval> & intervals, String<CharString> & re
             appendValue(intervals, interval);
             return 0;
         }
-        
+
         // Read file listing the regions.
         CharString regionsFile = regions[0];
         clear(regions);
         readRegions(regions, regionsFile);
     }
-    
+
     for(size_t i = 0; i < length(regions); ++i)
     {
         GenomicInterval interval;
@@ -219,7 +293,7 @@ bool parseIntervals(String<GenomicInterval> & intervals, String<CharString> & re
         }
         appendValue(intervals, interval);
     }
-    
+
     return 0;
 }
 
@@ -236,10 +310,10 @@ void cropInterval(BamIndex<Csi> & outcsi, BamIndex<Csi> & incsi, GenomicInterval
     resize(outcsi._binIndices, nRef);
 
     // --- Crop the region from the bin index ---
-    
+
     String<__uint32> candidateBins;
     _csiReg2bins(candidateBins, interval.begin, interval.end, incsi._minShift, incsi._depth);
-    
+
     typedef Iterator<String<__uint32>, Rooted>::Type TCandidateIter;
     for (TCandidateIter it = begin(candidateBins, Rooted()); !atEnd(it); ++it)
     {
@@ -253,7 +327,7 @@ void cropInterval(BamIndex<Csi> & outcsi, BamIndex<Csi> & incsi, GenomicInterval
         typedef Iterator<String<Pair<__uint64, __uint64> > const, Rooted>::Type TBegEndIter;
         for (TBegEndIter it2 = begin(mIt->second.chunkBegEnds, Rooted()); !atEnd(it2); goNext(it2))
             appendValue(chunks.chunkBegEnds, *it2);
-        
+
         if (length(chunks.chunkBegEnds) > 0)
             outcsi._binIndices[interval.chrId][*it] = chunks;
     }
@@ -274,11 +348,11 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
     unsigned windowEndIdx = (interval.end >> 14) + 1;
 
     __uint64 linearMinOffset = 0;
-    
+
     if (windowIdx < length(inbai._linearIndices[interval.chrId]))
     {
         linearMinOffset = inbai._linearIndices[interval.chrId][windowIdx];
-        
+
         __uint64 minOffset = 0u;
         for (unsigned i = interval.chrId; i < length(inbai._linearIndices); ++i)
         {
@@ -288,7 +362,7 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
                 break;
             }
         }
-    
+
         // Crop the linear index if user asked for it.
         if (writeLinear)
         {
@@ -327,12 +401,12 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
             linearMinOffset = back(inbai._linearIndices[interval.chrId]);
         }
     }
-    
+
     // --- Crop the region from the bin index ---
-    
+
     String<__uint16> candidateBins;
     _baiReg2bins(candidateBins, interval.begin, interval.end);
-    
+
     typedef Iterator<String<__uint16>, Rooted>::Type TCandidateIter;
     for (TCandidateIter it = begin(candidateBins, Rooted()); !atEnd(it); ++it)
     {
@@ -346,7 +420,7 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
         for (TBegEndIter it2 = begin(mIt->second.chunkBegEnds, Rooted()); !atEnd(it2); goNext(it2))
             if (it2->i2 >= linearMinOffset)
                 appendValue(chunks.chunkBegEnds, *it2);
-        
+
         if (length(chunks.chunkBegEnds) > 0)
             outbai._binIndices[interval.chrId][*it] = chunks;
     }
@@ -364,8 +438,8 @@ void printBamIndex(BamIndex<Csi> & csi)
     std::cout << "Length of auxiliary data: " << length(csi._aux) << std::endl;
     std::cout << "Length of bin indices: " << length(csi._binIndices) << std::endl;
     std::cout << std::endl;
-    
-    std::cout << "Auxiliary data: " << std::endl;    
+
+    std::cout << "Auxiliary data: " << std::endl;
     for (unsigned i = 0; i < length(csi._aux); ++i)
         std::cout << "  Aux data " << i << ": " << csi._aux[i] << std::endl;
     std::cout << std::endl;
@@ -502,7 +576,7 @@ int chopIndex(String<GenomicInterval> & intervals, CharString & indexfile, ChopB
         std::cerr << "ERROR: Open failed on bam index file " << indexfile << std::endl;
         return 1;
     }
-    
+
     // Crop the filename from the path of the index file.
     size_t i = length(indexfile);
     while (i > 0u)
@@ -518,20 +592,20 @@ int chopIndex(String<GenomicInterval> & intervals, CharString & indexfile, ChopB
         // Crop the region from the input bam index.
         BamIndex<TTag> outIndex;
         cropInterval(outIndex, inIndex, intervals[i], options.writeLinear);
-        
+
         // Create output directory if not exists.
         std::stringstream outdir;
         outdir << options.outputPrefix << "/" << options.regions[i];
         mkdir(toCString(outdir.str()), 0755);
-        
+
         std::stringstream outfile;
         outfile << outdir.str() << "/" << indexfilename;
-    
+
         // Write the output bam index for the region.
         if (!saveIndex(outIndex, toCString(outfile.str())))
             return 1;
     }
-    
+
     return 0;
 }
 
@@ -552,7 +626,7 @@ int main(int argc, char const ** argv)
     String<GenomicInterval> intervals;
     if (parseIntervals(intervals, options.regions, options.bamfile) != 0)
         return 1;
-        
+
     CharString baifile = options.bamfile;
     baifile += ".bai";
     CharString csifile = options.bamfile;
@@ -575,6 +649,6 @@ int main(int argc, char const ** argv)
         std::cerr << "ERROR: Could not find .bai or .csi file for input bam file " << options.bamfile << std::endl;
         return 1;
     }
-    
+
     return 0;
 }
