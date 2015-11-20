@@ -240,6 +240,15 @@ bool parseInterval(GenomicInterval & interval, CharString & region, NameStoreCac
 {
     typedef Iterator<CharString, Rooted>::Type TIter;
 
+    // first check if region names a chromosome
+    if (getIdByName(interval.chrId, refNames, region))
+    {
+      interval.begin = 0;
+      interval.end = MaxValue<__uint32>::VALUE;
+      return 0;
+    }
+    // otherwise, we need to parse the name
+
     // Read the chromosome name.
     CharString chrName;
     TIter it = begin(region);
@@ -259,20 +268,15 @@ bool parseInterval(GenomicInterval & interval, CharString & region, NameStoreCac
 
     if (hasColon)
     {
+        // check if the chromosome itself has a colon but is listed
         if (!getIdByName(interval.chrId, refNames, chrName))
         {
-            std::cerr << "WARNING: " << chrName << " does not specify a valid region " << std::endl;
+            std::cerr << "WARNING: " << chrName << " does not specify a valid segment " << std::endl;
             return 1;
         }
     } else {
-        if (!getIdByName(interval.chrId, refNames, region))
-        {
-            std::cerr << "WARNING: " << chrName << " does not specify a valid region " << std::endl;
-            return 1;
-        }
-        interval.begin = 0;
-        interval.end = MaxValue<__uint32>::VALUE;
-        return 0;
+        std::cerr << "WARNING: " << region << " does not specify a valid segment or region " << std::endl;
+        return 1;
     }
 
     // Read the begin and end position.
@@ -703,6 +707,6 @@ int main(int argc, char const ** argv)
         if (chopIndex(intervals, indexfile, options, Csi()) != 0)
             return 1;
     }
-    
+
     return 0;
 }
