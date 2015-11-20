@@ -1,5 +1,6 @@
 #include <fstream>
 #include <sstream>
+#include <unistd.h>
 
 #include <seqan/arg_parse.h>
 #include <seqan/bam_io.h>
@@ -19,9 +20,10 @@ struct ChopBaiOptions {
     // Output options
     CharString outputPrefix;
     bool writeLinear;
+    bool createSymlink;
 
     ChopBaiOptions() :
-        outputPrefix("."), writeLinear(false)
+        outputPrefix("."), writeLinear(false), createSymlink(false)
     {}
 };
 
@@ -51,7 +53,7 @@ void setupParser(ArgumentParser & parser, ChopBaiOptions & options)
 
     addDescription(parser, "Writes small index files for the specified regions based on an existing bai or csi file for "
                            "the input bamfile. The regions have to be specified in the formats \'chr:begin-end\', \'chr:begin\' and \'chr\' "
-                           " where \'begin\' and \'end\' are 1-based and both endpoints are included."
+                           " where \'begin\' and \'end\' are 1-based and both endpoints are included. "
                            "The regions can be listed directly on the command line separated by spaces or in a file listing one region "
                            "per line. The program writes a smaller index file for each region to the directory "
                            "\'<output prefix>/<region>/<bamfile>.[bai|csi]\'. The output directories are created if "
@@ -65,10 +67,12 @@ void setupParser(ArgumentParser & parser, ChopBaiOptions & options)
     addSection(parser, "Output options");
     addOption(parser, ArgParseOption("p", "prefix", "Output prefix.", ArgParseArgument::STRING, "STR"));
     addOption(parser, ArgParseOption("l", "linear", "Include linear index of BAI in the output."));
+    addOption(parser, ArgParseOption("s", "symlink", "Create a symbolic link to the bam file in the output directory."));
 
     // Set defualt values.
     setDefaultValue(parser, "prefix", "current directory");
     setDefaultValue(parser, "linear", options.writeLinear?"true":"false");
+    setDefaultValue(parser, "symlink", options.createSymlink?"true":"false");
 }
 
 
@@ -87,6 +91,8 @@ void getOptionValues(ChopBaiOptions & options, ArgumentParser & parser)
         getOptionValue(options.outputPrefix, parser, "prefix");
     if (isSet(parser, "linear"))
         options.writeLinear = true;
+    if (isSet(parser, "symlink"))
+        options.createSymlink = true;
 }
 
 
@@ -665,6 +671,15 @@ int chopIndex(String<GenomicInterval> & intervals, CharString & indexfile, ChopB
         // Write the output bam index for the region.
         if (!saveIndex(outIndex, toCString(outfile.str())))
             return 1;
+
+        // Create a symbolic link to the bam file if wished.
+        if (options.createSymlink)
+        {
+            CharString linkedbam = prefix(outfile.str(), length(outfile.str()) - 4);
+            if (suffix(linkedbam, length(linkedbam) - 4) != ".bam")
+                linkedbam += ".bam";
+            symlink(toCString(options.bamfile), toCString(linkedbam));
+        }
     }
 
     return 0;
@@ -681,7 +696,8 @@ int main(int argc, char const ** argv)
     // Parse command line parameters.
     ChopBaiOptions options;
     ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
-    if (res == ArgumentParser::PARSE_HELP || res == ArgumentParser::PARSE_VERSION)
+    if (res == ArgumentParser::PARSE_HELP || res == ArgumentParser::PARSE_VERSION ||
+        res ==  ArgumentParser::PARSE_WRITE_CTD || res == ArgumentParser::PARSE_EXPORT_HELP)
         return 0;
     else if (res != ArgumentParser::PARSE_OK)
         return 1;
