@@ -23,9 +23,14 @@ CXXFLAGS+=-O3 -DSEQAN_ENABLE_TESTING=0 -DSEQAN_ENABLE_DEBUG=0
 
 all: chopBAI
 
-chopBAI: chopBAI.o 
+chopBAI: chopBAI.o
 
 chopBAI.o: chopBAI.cpp bam_index_csi.h
 
+test:
+		cd tests/ && ./alltests.sh
+
 clean:
 	rm -f *.o chopBAI
+
+.PHONY: test
