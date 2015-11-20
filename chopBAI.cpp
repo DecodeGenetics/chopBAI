@@ -675,10 +675,22 @@ int chopIndex(String<GenomicInterval> & intervals, CharString & indexfile, ChopB
         // Create a symbolic link to the bam file if wished.
         if (options.createSymlink)
         {
-            CharString linkedbam = prefix(outfile.str(), length(outfile.str()) - 4);
+            char buf[10240];
+            if (getcwd(buf, 10240) == 0) {
+              std::cerr << "ERROR: could not get current directory?!?" << std::endl;
+              return 1;
+            }
+            CharString linkedbam = buf;
+            linkedbam += "/";
+            linkedbam += prefix(outfile.str(), length(outfile.str()) - 4);
             if (suffix(linkedbam, length(linkedbam) - 4) != ".bam")
                 linkedbam += ".bam";
-            symlink(toCString(options.bamfile), toCString(linkedbam));
+
+
+            CharString origbam = buf;
+            origbam += "/";
+            origbam += options.bamfile;
+            symlink(toCString(origbam), toCString(linkedbam));
         }
     }
 
