@@ -34,19 +34,48 @@ The program looks for a BAI file at `BAM-FILE.bai`.
 Example use case
 ----------------
 
-Assume we have given the file `sequence.bam` and `sequence.bam.bai` in the current directory.
+Assume we have given a bamfile and its index, e.g. `NA12878.bam` and `NA12878.bam.bai` downloaded from the 1000 genomes project and indexed using samtools, in the current directory:
+
+    wget -O NA12878.bam ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/phase3/data/NA12878/alignment/NA12878.mapped.ILLUMINA.bwa.CEU.low_coverage.20121211.bam
+    samtools index NA12878.bam
+
 We can create a reduced BAI file using
 
-    ./chopBAI sequence.bam chr4:15000000-16000000
+    ./chopBAI NA12878.bam 4:15000000-16000000
 
-This will create the folder `chr4:15000000-16000000` with the reduced BAI file `sequence.bam.bai` inside it.
+This will create the folder `4:15000000-16000000` and inside it the BAI file `NA12878.bam.bai`, which is reduced in size compared to the original index file:
 
-If you would like to use a tool that assumes the BAM and the BAI file to share a common prefix (such as `samtools`),  you can create a symbolic link, e.g
+    du -h NA12878.bam.bai 4\:15000000-16000000/NA12878.bam.bai
+    
+    8.3M    NA12878.bam.bai
+    4.0K    4:15000000-16000000/NA12878.bam.bai
 
-    ln -s sequence.bam chr4:15000000-16000000/sequence.bam
-    samtools view -c chr4:15000000-16000000/sequence.bam chr4:15500000-15600000
+If you would like to use a tool that assumes the BAM and the BAI file to share a common prefix (such as `samtools`), you can use chopBAI's `-s` option to create a symbolic link in the output folder:
 
-which then uses the original bam file, but the reduced index.
+    ./chopBAI -s NA12878.bam 4:15000000-16000000
+
+or create a symbolic link yourself, e.g.
+
+    ln -s NA12878.bam 4:15000000-16000000/NA12878.bam
+    
+A samtools command then uses the original bam file but the reduced index, e.g.
+
+    samtools view -c 4:15000000-16000000/NA12878.bam 4:15501000-15506000
+    
+    263
+
+If we compare the difference in I/O, e.g. the read system calls, when using the full index and the reduced index, we see a reduction by 96.21 % for this particular example:
+
+    strace -e trace=read -o full.log samtools view -c NA12878.bam 4:15501000-15506000 > /dev/null
+    awk 'BEGIN {FS="="}{ sum += $2} END {print sum}' full.log
+    
+    8033492
+    
+    strace -e trace=read -o reduced.log samtools view -c 4:15000000-16000000/NA12878.bam 4:15501000-15506000 > /dev/null
+    awk 'BEGIN {FS="="}{ sum += $2} END {print sum}' reduced.log
+    
+    304300
+
 
 References
 ----------
