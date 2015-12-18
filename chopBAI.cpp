@@ -69,7 +69,7 @@ void setupParser(ArgumentParser & parser, ChopBaiOptions & options)
     addOption(parser, ArgParseOption("l", "linear", "Include linear index of BAI in the output."));
     addOption(parser, ArgParseOption("s", "symlink", "Create a symbolic link to the bam file in the output directory."));
 
-    // Set defualt values.
+    // Set default values.
     setDefaultValue(parser, "prefix", "current directory");
     setDefaultValue(parser, "linear", options.writeLinear?"true":"false");
     setDefaultValue(parser, "symlink", options.createSymlink?"true":"false");
@@ -398,6 +398,8 @@ void cropInterval(BamIndex<Csi> & outcsi, BamIndex<Csi> & incsi, GenomicInterval
         if (length(chunks.chunkBegEnds) > 0)
             outcsi._binIndices[interval.chrId][*it] = chunks;
     }
+
+    // TODO: Copy the metabin if whole chromosome is cropped.
 }
 
 // -----------------------------------------------------------------------------
@@ -491,6 +493,10 @@ void cropInterval(BamIndex<Bai> & outbai, BamIndex<Bai> & inbai, GenomicInterval
         if (length(chunks.chunkBegEnds) > 0)
             outbai._binIndices[interval.chrId][*it] = chunks;
     }
+
+	// Copy the metabin (magic bin number 37450) if whole chromosome is cropped.
+	if (interval.begin == 0 && interval.end == MaxValue<__uint32>::VALUE)
+		outbai._binIndices[interval.chrId][37450] = inbai._binIndices[interval.chrId].find(37450)->second;
 }
 
 
