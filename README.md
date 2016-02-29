@@ -3,6 +3,8 @@ chopBAI
 
 Chopping a BAM index file into pieces.
 
+chopBAI implements a reduction of a BAM index file to a specified genomic interval. The resulting index is much smaller in size and is semantically equivalent to the complete index, in the sense that it will give the same answers for all queries to reads within the interval of interest. Queries outside of the interval do *not* result in an error; instead, the queried regions may appear as empty even if the BAM file contains aligned reads.
+
 
 Installation
 ------------
