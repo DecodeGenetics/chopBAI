@@ -281,7 +281,6 @@ bool parseInterval(GenomicInterval & interval, CharString & region, NameStoreCac
             return 1;
         }
     } else {
-        std::cerr << "WARNING: " << region << " does not specify a valid segment or region " << std::endl;
         return 1;
     }
 
