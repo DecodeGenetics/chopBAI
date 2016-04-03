@@ -1,0 +1,47 @@
+# This is a special configuration file to run tests on Travis-CI via
+# GitHub notifications when changes are committed.
+#
+# See http://travis-ci.org/ for details
+
+sudo: false
+
+os:
+  - linux
+  - osx
+
+language: c
+compiler:
+  - clang
+  - gcc
+
+matrix:
+  include:
+    # An unoptimised C99 build, for detecting non-static inline functions
+    - compiler: gcc
+      env: CFLAGS="-std=gnu99 -O0"
+
+env:
+  global:
+    - SEQAN_LIB=
+    - HTSDIR=./htslib
+
+before_install:
+  # Fetch semi-recent samtools - precompiled to avoid wasting time building it
+  # and we only need to extract the main binary, which we'll put on the $PATH
+  - if [[ $TRAVIS_OS_NAME == osx ]]; then curl -o samtools.tgz -L https://depot.galaxyproject.org/package/darwin/x86_64/samtools/samtools-0.1.19-Darwin-x86_64.tgz; fi
+  - if [[ $TRAVIS_OS_NAME != osx ]]; then curl -o samtools.tgz -L https://depot.galaxyproject.org/package/linux/x86_64/samtools/samtools-0.1.19-Linux-x86_64.tgz; fi
+  - tar -zxvf samtools.tgz bin/samtools
+  - export PATH=$PWD/bin/:$PATH
+  # Fetch latest SEQAN from GitHub, only want their include/seqan folder
+  # The branch tar-ball is likely faster than using git clone
+  - curl -o seqan-master.tar.gz https://codeload.github.com/seqan/seqan/tar.gz/master
+  - tar -zxvf seqan-master.tar.gz seqan-master/include/seqan
+  # Put the seqan headers where the default Makefile expects them:
+  - mv seqan-master/include/seqan/ seqan
+
+install:
+  - make
+
+script:
+  - ./chopBAI --version
+  - make test
